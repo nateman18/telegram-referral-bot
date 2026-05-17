@@ -7,8 +7,8 @@ import os
 TOKEN = os.getenv("TOKEN")
 
 # ===== SETTINGS =====
-CHANNEL = "https://t.me/AshleiArchive"
-PRIVATE_CHANNEL = "https://t.me/ashleepremium"
+CHANNEL = "@AshleiArchive"
+PRIVATE_CHANNEL = "@ashleepremium"
 REQUIRED_JOINS = 2
 
 # ===== DATABASE =====
