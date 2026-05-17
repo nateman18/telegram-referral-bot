@@ -1,10 +1,13 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ChatMemberHandler, ContextTypes
 import sqlite3
 import os
 
 # ===== TOKEN =====
 TOKEN = os.getenv("TOKEN")
+
+if not TOKEN:
+    raise ValueError("Missing TOKEN in environment variables")
 
 # ===== SETTINGS =====
 CHANNEL = "@AshleiArchive"
@@ -24,7 +27,27 @@ CREATE TABLE IF NOT EXISTS users (
     message_id INTEGER
 )
 """)
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS joins_log (
+    user_id INTEGER,
+    joined_user_id INTEGER,
+    PRIMARY KEY (user_id, joined_user_id)
+)
+""")
+
 conn.commit()
+
+# ===== BUTTON UI =====
+def build_keyboard(joins):
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                f"{joins}/{REQUIRED_JOINS} invites - Invite friends",
+                url=f"https://t.me/share/url?url=https://t.me/{CHANNEL.replace('@','')}"
+            )
+        ]
+    ])
 
 # ===== START =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -50,53 +73,48 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         conn.commit()
 
     msg = await update.message.reply_text(
-        f"Share this link\n"
-        f"Bring {REQUIRED_JOINS} people to unlock\n"
-        f"Progress: {joins}/{REQUIRED_JOINS}\n\n"
-        f"{link}"
+        "Invite 2 friends to unlock:",
+        reply_markup=build_keyboard(joins)
     )
 
     cur.execute("UPDATE users SET message_id=? WHERE user_id=?", (msg.message_id, user_id))
     conn.commit()
 
-# ===== UPDATE MESSAGE =====
-async def update_ui(context, user_id, joins, link):
+# ===== UPDATE UI (NO SPAM, ONLY BUTTON EDIT) =====
+async def update_ui(context, user_id, joins):
     cur.execute("SELECT message_id FROM users WHERE user_id=?", (user_id,))
     row = cur.fetchone()
 
-    if not row:
+    if not row or not row[0]:
         return
 
-    message_id = row[0]
-
     try:
-        await context.bot.edit_message_text(
+        await context.bot.edit_message_reply_markup(
             chat_id=user_id,
-            message_id=message_id,
-            text=(
-                f"Share this link\n"
-                f"Bring {REQUIRED_JOINS} people to unlock\n"
-                f"Progress: {joins}/{REQUIRED_JOINS}\n\n"
-                f"{link}"
-            )
+            message_id=row[0],
+            reply_markup=build_keyboard(joins)
         )
     except:
         pass
 
-# ===== TRACK JOIN EVENTS =====
+# ===== TRACK JOIN EVENTS (ANTI-FAKE PROTECTED) =====
 async def track(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cm = update.chat_member
 
-    if not cm or not cm.invite_link:
+    if not cm:
         return
 
     if cm.new_chat_member.status != "member":
         return
 
+    if not cm.invite_link:
+        return
+
+    joined_user_id = cm.new_chat_member.user.id
     link_used = cm.invite_link.invite_link
 
     cur.execute("""
-    SELECT user_id, joins, invite_link, unlocked
+    SELECT user_id, joins
     FROM users
     WHERE invite_link=?
     """, (link_used,))
@@ -105,12 +123,28 @@ async def track(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not row:
         return
 
-    user_id, joins, link, unlocked = row
+    user_id, joins = row
+
+    # ===== ANTI-FAKE CHECK =====
+    cur.execute("""
+    SELECT 1 FROM joins_log
+    WHERE user_id=? AND joined_user_id=?
+    """, (user_id, joined_user_id))
+
+    if cur.fetchone():
+        return
+
+    cur.execute("""
+    INSERT INTO joins_log (user_id, joined_user_id)
+    VALUES (?, ?)
+    """, (user_id, joined_user_id))
+
+    conn.commit()
 
     joins += 1
 
+    # mark unlocked if needed
     if joins >= REQUIRED_JOINS:
-        unlocked = 1
         try:
             await context.bot.unban_chat_member(PRIVATE_CHANNEL, user_id)
         except:
@@ -118,14 +152,14 @@ async def track(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     cur.execute("""
     UPDATE users
-    SET joins=?, unlocked=?
+    SET joins=?
     WHERE user_id=?
-    """, (joins, unlocked, user_id))
+    """, (joins, user_id))
     conn.commit()
 
-    await update_ui(context, user_id, joins, link)
+    await update_ui(context, user_id, joins)
 
-# ===== RUN BOT (NO UPDATER) =====
+# ===== RUN BOT =====
 app = Application.builder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
