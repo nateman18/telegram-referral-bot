@@ -8,7 +8,7 @@ TOKEN = os.getenv("TOKEN")
 
 # ===== SETTINGS =====
 CHANNEL = "https://t.me/AshleiArchive"
-PRIVATE_CHANNEL = "https://t.me/+_9Jo1QhekgNiN2I1"
+PRIVATE_CHANNEL = "https://t.me/ashleepremium"
 REQUIRED_JOINS = 2
 
 # ===== DATABASE =====
