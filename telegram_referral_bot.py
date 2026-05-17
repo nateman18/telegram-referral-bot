@@ -3,7 +3,7 @@ from telegram.ext import Application, CommandHandler, ChatMemberHandler, Context
 import sqlite3
 
 # ===== CONFIG =====
-TOKEN = "8802546601:AAHxG3x-mIkZCpvFTkA3zwxu5KTDtoK1asQ"
+TOKEN = os.getenv(""8802546601:AAHxG3x-mIkZCpvFTkA3zwxu5KTDtoK1asQ"") 
 CHANNEL = "https://t.me/AshleiArchive"
 PRIVATE_CHANNEL = "https://t.me/+_9Jo1QhekgNiN2I1"  # where users get unlocked access
 REQUIRED_JOINS = 2
