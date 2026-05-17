@@ -3,8 +3,10 @@ from telegram.ext import Application, CommandHandler, ChatMemberHandler, Context
 import sqlite3
 import os
 
-# ===== CONFIG =====
+# ===== TOKEN =====
 TOKEN = os.getenv("TOKEN")
+
+# ===== SETTINGS =====
 CHANNEL = "https://t.me/AshleiArchive"
 PRIVATE_CHANNEL = "https://t.me/+_9Jo1QhekgNiN2I1"
 REQUIRED_JOINS = 2
@@ -28,20 +30,18 @@ conn.commit()
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
-    cur.execute("SELECT invite_link, joins, message_id FROM users WHERE user_id=?", (user_id,))
+    cur.execute("SELECT invite_link, joins FROM users WHERE user_id=?", (user_id,))
     row = cur.fetchone()
 
     if row:
-        link, joins, message_id = row
+        link, joins = row
     else:
         link_obj = await context.bot.create_chat_invite_link(
             chat_id=CHANNEL,
             name=str(user_id)
         )
-
         link = link_obj.invite_link
         joins = 0
-        message_id = None
 
         cur.execute("""
         INSERT OR REPLACE INTO users (user_id, invite_link, joins, unlocked, message_id)
@@ -49,23 +49,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """, (user_id, link))
         conn.commit()
 
-    text = (
+    msg = await update.message.reply_text(
         f"Share this link\n"
         f"Bring {REQUIRED_JOINS} people to unlock\n"
         f"Progress: {joins}/{REQUIRED_JOINS}\n\n"
         f"{link}"
     )
 
-    sent = await update.message.reply_text(text)
-
-    # save message id for live updates
-    cur.execute("""
-    UPDATE users SET message_id=? WHERE user_id=?
-    """, (sent.message_id, user_id))
+    cur.execute("UPDATE users SET message_id=? WHERE user_id=?", (msg.message_id, user_id))
     conn.commit()
 
 # ===== UPDATE UI =====
-async def update_ui(context, user_id, joins, link, unlocked):
+async def update_ui(context, user_id, joins, link):
     cur.execute("SELECT message_id FROM users WHERE user_id=?", (user_id,))
     row = cur.fetchone()
 
@@ -74,18 +69,16 @@ async def update_ui(context, user_id, joins, link, unlocked):
 
     message_id = row[0]
 
-    text = (
-        f"Share this link\n"
-        f"Bring {REQUIRED_JOINS} people to unlock\n"
-        f"Progress: {joins}/{REQUIRED_JOINS}\n\n"
-        f"{link}"
-    )
-
     try:
         await context.bot.edit_message_text(
             chat_id=user_id,
             message_id=message_id,
-            text=text
+            text=(
+                f"Share this link\n"
+                f"Bring {REQUIRED_JOINS} people to unlock\n"
+                f"Progress: {joins}/{REQUIRED_JOINS}\n\n"
+                f"{link}"
+            )
         )
     except:
         pass
@@ -118,7 +111,6 @@ async def track(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if joins >= REQUIRED_JOINS:
         unlocked = 1
-
         try:
             await context.bot.unban_chat_member(PRIVATE_CHANNEL, user_id)
         except:
@@ -131,9 +123,9 @@ async def track(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """, (joins, unlocked, user_id))
     conn.commit()
 
-    await update_ui(context, user_id, joins, link, unlocked)
+    await update_ui(context, user_id, joins, link)
 
-# ===== APP =====
+# ===== RUN BOT =====
 app = Application.builder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
