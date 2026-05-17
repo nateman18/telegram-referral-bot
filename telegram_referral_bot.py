@@ -72,12 +72,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """, (user_id, link))
         conn.commit()
 
-    msg = await update.message.reply_text(
-        "Invite 2 friends to unlock:",
+    msg = await update.message.reply_photo(
+        photo=open("image.jpg", "rb"),
+        caption=(
+            "Invite friends to unlock\n"
+            f"Progress: {joins}/{REQUIRED_JOINS}\n\n"
+            "Tap share button below"
+        ),
         reply_markup=build_keyboard(joins)
     )
 
-    cur.execute("UPDATE users SET message_id=? WHERE user_id=?", (msg.message_id, user_id))
+    cur.execute(
+        "UPDATE users SET message_id=? WHERE user_id=?",
+        (msg.message_id, user_id)
+    )
     conn.commit()
 
 # ===== UPDATE UI (NO SPAM, ONLY BUTTON EDIT) =====
