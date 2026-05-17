@@ -4,7 +4,7 @@ import sqlite3
 import os
 
 # ===== CONFIG =====
-TOKEN = os.getenv("8802546601:AAHxG3x-mIkZCpvFTkA3zwxu5KTDtoK1asQ")
+TOKEN = os.getenv("TOKEN")
 CHANNEL = "https://t.me/AshleiArchive"
 PRIVATE_CHANNEL = "https://t.me/+_9Jo1QhekgNiN2I1"
 REQUIRED_JOINS = 2
