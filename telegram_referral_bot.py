@@ -59,7 +59,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cur.execute("UPDATE users SET message_id=? WHERE user_id=?", (msg.message_id, user_id))
     conn.commit()
 
-# ===== UPDATE UI =====
+# ===== UPDATE MESSAGE =====
 async def update_ui(context, user_id, joins, link):
     cur.execute("SELECT message_id FROM users WHERE user_id=?", (user_id,))
     row = cur.fetchone()
@@ -83,7 +83,7 @@ async def update_ui(context, user_id, joins, link):
     except:
         pass
 
-# ===== TRACK JOINS =====
+# ===== TRACK JOIN EVENTS =====
 async def track(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cm = update.chat_member
 
@@ -125,7 +125,7 @@ async def track(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update_ui(context, user_id, joins, link)
 
-# ===== RUN BOT =====
+# ===== RUN BOT (NO UPDATER) =====
 app = Application.builder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
