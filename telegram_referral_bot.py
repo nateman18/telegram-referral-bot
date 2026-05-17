@@ -3,8 +3,8 @@ from telegram.ext import Application, CommandHandler, ChatMemberHandler, Context
 import sqlite3
 
 # ===== CONFIG =====
-TOKEN = "YOUR_BOT_TOKEN"
-CHANNEL = "@YOUR_CHANNEL"
+TOKEN = "8802546601:AAHxG3x-mIkZCpvFTkA3zwxu5KTDtoK1asQ"
+CHANNEL = "https://t.me/+1ehQ1phaLVs2YTZl"
 
 # ===== DATABASE =====
 conn = sqlite3.connect("bot.db", check_same_thread=False)
